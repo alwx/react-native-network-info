@@ -9,10 +9,12 @@ import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+
+import java.net.Inet4Address;
 import java.net.InetAddress;
 
 import java.net.NetworkInterface;
-import java.util.Enumeration;
+import java.util.Collections;
 
 public class RNNetworkInfo extends ReactContextBaseJavaModule {
   WifiManager wifi;
@@ -45,28 +47,20 @@ public class RNNetworkInfo extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void getBSSID(final Callback callback) {
-    callback.invoke(wifi.getConnectionInfo().getBSSID());
-  }
-
-  @ReactMethod
   public void getIPAddress(final Callback callback) {
-    String ipAddress = null;
-
     try {
-      for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-        NetworkInterface intf = en.nextElement();
-        for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
-          InetAddress inetAddress = enumIpAddr.nextElement();
-          if (!inetAddress.isLoopbackAddress()) {
-            ipAddress = inetAddress.getHostAddress();
+      for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+        if (ni.isUp() && !ni.isLoopback() && !ni.isVirtual()) {
+          for (InetAddress address : Collections.list(ni.getInetAddresses())) {
+            if (address instanceof Inet4Address) {
+              callback.invoke(address.getHostAddress());
+              return;
+            }
           }
         }
       }
     } catch (Exception ex) {
       Log.e(TAG, ex.toString());
     }
-
-    callback.invoke(ipAddress);
   }
 }
